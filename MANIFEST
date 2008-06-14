@@ -1,9 +1,10 @@
-Build.PL
 Changes
-MANIFEST
-Makefile.PL
-README
 lib/WWW/Plurk.pm
+Makefile.PL
+MANIFEST
+README
 t/00.load.t
+t/login.t
+t/misc.t
 t/pod-coverage.t
 t/pod.t

@@ -1,0 +1,57 @@
+RLPlurk API
+
+Copyright (c) 2008 Ryan Lim (and others).
+
+This program is free software licensed under the New BSD License
+(http://www.opensource.org/licenses/bsd-license.php). Please read the LICENSES
+file for license information.
+
+This program is provided in hope that it will be useful to the Plurk community.
+Unfortunately, it does not come with any warranty or guarantee that it works.
+
+*******************************************************************************
+This is an unofficial Plurk API code, and thus, is not supported by the Plurk
+team. Please do not contact them if you encounter problems with this API.
+
+Instead, please browse the bug report at:
+   http://code.google.com/p/rlplurkapi/issues/list
+and see if the bug has already been reported. If it has not been reported,
+please report it.
+*******************************************************************************
+
+
+The project site is at: http://code.google.com/p/rlplurkapi/
+
+API Documentation is available at: http://plurk.ryanlim.com/api/
+
+
+
+Requirements:
+- PHP 5
+- A Plurk account
+
+
+Files:
+- README
+  This file.
+
+- LICENSE
+  The BSD license file.
+
+- CONTRIBUTORS
+  Credits to those whom have provided invaluable help and support.
+
+- RLPlurkAPI.php
+  This is the PHP 5 class file.
+
+- pear/
+  Our dependencies classes.
+
+- example.php
+  A PHP file with examples how to use the API.
+
+
+*******************************************************************************
+Again, this is an unofficial Plurk API code, and thus, is not supported by the
+Plurk team. Please do not contact them if you encounter problems with this API.
+*******************************************************************************
