@@ -238,6 +238,16 @@ Post a new plurk.
 
 =cut
 
+sub _is_user {
+    my ( $self, $obj ) = @_;
+    return UNIVERSAL::can( $obj, 'can' ) && $obj->can( 'uid' );
+}
+
+sub _uid_cast {
+    my ( $self, $obj ) = @_;
+    return $self->_is_user( $obj ) ? $obj->uid : $obj;
+}
+
 sub add_plurk {
     my ( $self, @args ) = @_;
     croak "Needs a number of key => value pairs"
@@ -249,12 +259,8 @@ sub add_plurk {
     my $qualifier   = delete $args{qualifier}   || 'says';
     my $no_comments = delete $args{no_comments} || 0;
 
-    my @limit = map {
-        UNIVERSAL::can( $_, 'can' )
-          && $_->can( 'uid' )
-          ? $_->uid
-          : $_
-    } @{ delete $args{limit} || [] };
+    my @limit
+      = map { $self->_uid_cast( $_ ) } @{ delete $args{limit} || [] };
 
     if ( my @extra = sort keys %args ) {
         croak "Unknown parameter(s): ", join ',', @extra;
@@ -290,6 +296,25 @@ sub add_plurk {
 
     return WWW::Plurk::Message->new( $reply->{plurk} );
 
+}
+
+=head2 C<< get_plurks >>
+
+=cut
+
+sub get_plurks {
+    my ( $self, @args ) = @_;
+    croak "Needs a number of key => value pairs"
+      if @args & 1;
+    my %args = @args;
+
+    my $uid = $self->_uid_cast( delete $args{uid} || $self->uid );
+    # TODO: Don't understand the dates
+    my $responses = delete $args{responses} || 0;
+
+    if ( my @extra = sort keys %args ) {
+        croak "Unknown parameter(s): ", join ',', @extra;
+    }
 }
 
 =head2 C<< path_for >>
