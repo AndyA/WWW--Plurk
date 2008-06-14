@@ -5,6 +5,10 @@ use strict;
 use Carp;
 use LWP::UserAgent;
 use HTTP::Cookies;
+use HTML::Tiny;
+use JSON;
+use DateTime::Format::Mail;
+use WWW::Plurk::Friend;
 
 =head1 NAME
 
@@ -44,10 +48,22 @@ my %PATH_DEFAULT = (
     get_responses     => '/Responses/get2',
     get_unread_plurks => '/TimeLine/getUnreadPlurks',
     get_completion    => '/Users/getCompletion',
+    home              => undef,
 );
 
 BEGIN {
-    my @ATTR = qw( base_uri user );
+    my @ATTR = qw(
+      base_uri
+      info
+      state
+    );
+
+    my @INFO = qw(
+      full_name
+      nick_name
+      uid
+    );
+
     for my $attr ( @ATTR ) {
         no strict 'refs';
         *{$attr} = sub {
@@ -55,6 +71,11 @@ BEGIN {
             return $self->{$attr} unless @_;
             return $self->{$attr} = shift;
         };
+    }
+
+    for my $info ( @INFO ) {
+        no strict 'refs';
+        *{$info} = sub { shift->info->{$info} };
     }
 }
 
@@ -69,6 +90,7 @@ sub new {
     my $self  = bless {
         base_uri => $BASE_DEFAULT,
         path     => {%PATH_DEFAULT},
+        state    => 'init',
     }, $class;
     return $self;
 }
@@ -76,6 +98,7 @@ sub new {
 sub _make_ua {
     my $self = shift;
     my $ua   = LWP::UserAgent->new;
+    $ua->agent( join ' ', __PACKAGE__, $VERSION );
     $ua->cookie_jar( HTTP::Cookies->new );
     return $ua;
 }
@@ -89,7 +112,18 @@ sub _cookies { shift->_ua->cookie_jar }
 
 sub _post {
     my ( $self, $service, $params ) = @_;
-    my $resp = $self->_ua->post( $self->uri_for( $service ), $params );
+    my $resp
+      = $self->_ua->post( $self->uri_for( $service ), $params || {} );
+    croak $resp->status_line
+      unless $resp->is_success
+          or $resp->is_redirect;
+    return $resp;
+}
+
+sub _get {
+    my ( $self, $service, $params ) = @_;
+    my $resp
+      = $self->_ua->get( $self->uri_for( $service, $params || {} ) );
     croak $resp->status_line
       unless $resp->is_success
           or $resp->is_redirect;
@@ -104,8 +138,7 @@ sub login {
     my ( $self, $name, $pass ) = @_;
 
     my $resp = $self->_post(
-        'login',
-        {
+        login => {
             nick_name => $name,
             password  => $pass,
         }
@@ -116,8 +149,73 @@ sub login {
     croak "Login for $name failed, no cookie returned"
       unless $ok;
 
-    $self->user( $name );
+    $self->path_for( home => $resp->header( 'Location' )
+          || "/user/$name" );
 
+    $self->_parse_user_home;
+    $self->state( 'login' );
+}
+
+sub _parse_time {
+    my ( $self, $time ) = @_;
+    return DateTime::Format::Mail->parse_datetime( $time )->epoch;
+}
+
+sub _decode_json {
+    my ( $self, $json ) = @_;
+
+    # Plurk actually returns JS rather than JSON.
+    $json =~ s{ new \s+ Date \s* \( \s* " (.+?) " \s* \) }
+        { $self->_parse_time( $1 ) }xeg;
+
+    return decode_json $json;
+}
+
+sub _parse_user_home {
+    my $self = shift;
+    my $resp = $self->_get( 'home' );
+    if ( $resp->content =~ /^\s*var\s+GLOBAL\s*=\s*(.+)$/m ) {
+        my $global = $self->_decode_json( $1 );
+        $self->info(
+            $global->{session_user}
+              or croak "No session_user data found"
+        );
+    }
+    else {
+        croak "Can't find GLOBAL data on user page";
+    }
+}
+
+=head2 C<< is_logged_in >>
+
+=cut
+
+sub is_logged_in { shift->state eq 'login' }
+
+sub _logged_in {
+    my $self = shift;
+    croak "Please login first"
+      unless $self->is_logged_in;
+}
+
+=head2 C<< friends >>
+
+=cut
+
+sub _get_friends {
+    my $self = shift;
+    $self->_logged_in;
+    my $friends = decode_json $self->_get(
+        get_completion => { user_id => $self->uid } )->content;
+    return [
+        map { WWW::Plurk::Friend->new( $_, $friends->{$_} ) }
+          keys %$friends
+    ];
+}
+
+sub friends {
+    my $self = shift;
+    return @{ $self->{friends} ||= $self->_get_friends };
 }
 
 =head2 C<< path_for >>
@@ -140,13 +238,23 @@ Return the uri for part of the service
 
 sub uri_for {
     my ( $self, $service ) = ( shift, shift );
-    croak "uri_for may not be set" if @_;
-    return $self->base_uri . $self->path_for( $service );
+    my $uri = $self->base_uri . $self->path_for( $service );
+    return $uri unless @_;
+    my $params = shift;
+    return join '?', $uri, HTML::Tiny->new->query_encode( $params );
 }
 
 =head2 C<< base_uri >>
 
-=head2 C<< user >>
+=head2 C<< info >>
+
+=head2 C<< state >>
+
+=head2 C<< nick_name >>
+
+=head2 C<< full_name >>
+
+=head2 C<< uid >>
 
 =cut
 

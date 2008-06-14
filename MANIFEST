@@ -1,5 +1,6 @@
 Changes
 lib/WWW/Plurk.pm
+lib/WWW/Plurk/Friend.pm
 Makefile.PL
 MANIFEST
 README
