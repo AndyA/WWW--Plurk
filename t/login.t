@@ -14,6 +14,11 @@ if ( my $plurk_env = $ENV{PLURK_TEST_ACCOUNT} ) {
     my @friends = $plurk->friends;
     cmp_deeply [@friends], array_each( isa( 'WWW::Plurk::Friend' ) ),
       "friends";
+
+    # $plurk->add_plurk(
+    #     qualifier => 'is',
+    #     content   => 'testing WWW::Plurk repeatedly'
+    # );
 }
 else {
     plan skip_all =>

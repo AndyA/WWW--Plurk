@@ -2,13 +2,16 @@ package WWW::Plurk;
 
 use warnings;
 use strict;
+
 use Carp;
-use LWP::UserAgent;
-use HTTP::Cookies;
-use HTML::Tiny;
-use JSON;
 use DateTime::Format::Mail;
+use HTML::Tiny;
+use HTTP::Cookies;
+use JSON;
+use LWP::UserAgent;
+use Time::Piece;
 use WWW::Plurk::Friend;
+use WWW::Plurk::Message;
 
 =head1 NAME
 
@@ -34,21 +37,23 @@ Based on Ryan Lim's unofficial PHP API: L<http://code.google.com/p/rlplurkapi/>
 
 # Default API URIs
 
+use constant MAX_MESSAGE_LENGTH => 140;
+
 my $BASE_DEFAULT = 'http://www.plurk.com';
 
 my %PATH_DEFAULT = (
-    login             => '/Users/login?redirect_page=main',
-    add_plurk         => '/TimeLine/addPlurk',
-    notifications     => '/Notifications',
     accept_friend     => '/Notifications/allow',
+    add_plurk         => '/TimeLine/addPlurk',
+    add_response      => '/Responses/add',
     deny_friend       => '/Notifications/deny',
+    get_completion    => '/Users/getCompletion',
     get_friends       => '/Users/getFriends',
     get_plurks        => '/TimeLine/getPlurks',
-    add_response      => '/Responses/add',
     get_responses     => '/Responses/get2',
     get_unread_plurks => '/TimeLine/getUnreadPlurks',
-    get_completion    => '/Users/getCompletion',
     home              => undef,
+    login             => '/Users/login?redirect_page=main',
+    notifications     => '/Notifications',
 );
 
 BEGIN {
@@ -75,7 +80,12 @@ BEGIN {
 
     for my $info ( @INFO ) {
         no strict 'refs';
-        *{$info} = sub { shift->info->{$info} };
+        *{$info} = sub {
+            my $self = shift;
+            # Info attributes only available when logged in
+            $self->_logged_in;
+            return $self->info->{$info};
+        };
     }
 }
 
@@ -216,6 +226,70 @@ sub _get_friends {
 sub friends {
     my $self = shift;
     return @{ $self->{friends} ||= $self->_get_friends };
+}
+
+=head2 C<< add_plurk >>
+
+Post a new plurk.
+
+    $plurk->add_plurk(
+        content => 'Hello, World'
+    );
+
+=cut
+
+sub add_plurk {
+    my ( $self, @args ) = @_;
+    croak "Needs a number of key => value pairs"
+      if @args & 1;
+    my %args = @args;
+
+    my $content = delete $args{content} || croak "Must have content";
+    my $lang    = delete $args{lang}    || 'en';
+    my $qualifier   = delete $args{qualifier}   || 'says';
+    my $no_comments = delete $args{no_comments} || 0;
+
+    my @limit = map {
+        UNIVERSAL::can( $_, 'can' )
+          && $_->can( 'uid' )
+          ? $_->uid
+          : $_
+    } @{ delete $args{limit} || [] };
+
+    if ( my @extra = sort keys %args ) {
+        croak "Unknown parameter(s): ", join ',', @extra;
+    }
+
+    if ( length $content > MAX_MESSAGE_LENGTH ) {
+        croak 'Plurks are limited to '
+          . MAX_MESSAGE_LENGTH
+          . ' characters';
+    }
+
+    my $reply = $self->_decode_json(
+        $self->_get(
+            add_plurk => {
+                posted      => localtime()->datetime,
+                qualifier   => $qualifier,
+                content     => $content,
+                lang        => $lang,
+                no_comments => ( $no_comments ? 1 : 0 ),
+                @limit
+                ? ( limited_to => '[' . join( ',', @limit ) . ']' )
+                : (),
+            }
+          )->content
+    );
+
+    # use Data::Dumper;
+    # warn "# ", Dumper( $reply ), "\n";
+
+    if ( my $error = $reply->{error} ) {
+        croak "Error posting: $error";
+    }
+
+    return WWW::Plurk::Message->new( $reply->{plurk} );
+
 }
 
 =head2 C<< path_for >>

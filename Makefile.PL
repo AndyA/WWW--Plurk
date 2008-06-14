@@ -20,6 +20,7 @@ WriteMakefile(
         'LWP::UserAgent'         => 0,
         'Test::Deep'             => 0,
         'Test::More'             => 0,
+        'Time::Piece'            => 0,
     },
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES    => 'WWW-Plurk-*' },

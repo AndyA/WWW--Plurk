@@ -1,6 +1,7 @@
 Changes
 lib/WWW/Plurk.pm
 lib/WWW/Plurk/Friend.pm
+lib/WWW/Plurk/Message.pm
 Makefile.PL
 MANIFEST
 README
@@ -9,3 +10,4 @@ t/login.t
 t/misc.t
 t/pod-coverage.t
 t/pod.t
+t/post.t
