@@ -19,6 +19,13 @@ if ( my $plurk_env = $ENV{PLURK_TEST_ACCOUNT} ) {
     #     qualifier => 'is',
     #     content   => 'testing WWW::Plurk repeatedly'
     # );
+
+    my @plurks = $plurk->get_plurks;
+    # use Data::Dumper;
+    # diag Dumper( \@plurks );
+    if ( @plurks ) {
+        my @responses = $plurks[0]->get_responses;
+    }
 }
 else {
     plan skip_all =>

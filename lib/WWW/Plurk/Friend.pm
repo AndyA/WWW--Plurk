@@ -31,6 +31,7 @@ BEGIN {
       full_name
       nick_name
       uid
+      plurk
     );
 
     for my $info ( @INFO ) {
@@ -46,8 +47,21 @@ BEGIN {
 =cut
 
 sub new {
-    my ( $class, $uid, $detail ) = @_;
-    return bless { uid => $uid, %$detail, }, $class;
+    my ( $class, $plurk, $uid, $detail ) = @_;
+    return bless {
+        plurk => $plurk,
+        uid   => $uid,
+        %$detail,
+    }, $class;
+}
+
+=head2 C<< friends >>
+
+=cut
+
+sub friends {
+    my $self = shift;
+    return $self->plurk->friends_for( $self );
 }
 
 =head2 C<< full_name >>
@@ -55,6 +69,8 @@ sub new {
 =head2 C<< nick_name >>
 
 =head2 C<< uid >>
+
+=head2 C<< plurk >>
 
 =cut
 

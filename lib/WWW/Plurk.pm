@@ -130,6 +130,11 @@ sub _post {
     return $resp;
 }
 
+sub _json_post {
+    my $self = shift;
+    return $self->_decode_json( $self->_post( @_ )->content );
+}
+
 sub _get {
     my ( $self, $service, $params ) = @_;
     my $resp
@@ -138,6 +143,11 @@ sub _get {
       unless $resp->is_success
           or $resp->is_redirect;
     return $resp;
+}
+
+sub _json_get {
+    my $self = shift;
+    return $self->_decode_json( $self->_get( @_ )->content );
 }
 
 =head2 C<< login >>
@@ -174,9 +184,25 @@ sub _parse_time {
 sub _decode_json {
     my ( $self, $json ) = @_;
 
+    my %strings    = ();
+    my $next_token = 1;
+
+    my $tok = sub {
+        my $str = shift;
+        my $key = sprintf '#%d#', $next_token++;
+        $strings{$key} = $str;
+        return qq{"$key"};
+    };
+
+    # Stash string literals to avoid false positives
+    $json =~ s{ " ( (?: \\. | [^\\"]+ )* ) " }{ $tok->( $1 ) }xeg;
+
     # Plurk actually returns JS rather than JSON.
-    $json =~ s{ new \s+ Date \s* \( \s* " (.+?) " \s* \) }
-        { $self->_parse_time( $1 ) }xeg;
+    $json =~ s{ new \s+ Date \s* \( \s* " (\#\d+\#) " \s* \) }
+        { $self->_parse_time( $strings{$1} ) }xeg;
+
+    # Replace string literals
+    $json =~ s{ " (\#\d+\#) " }{ qq{"$strings{$1}"} }xeg;
 
     return decode_json $json;
 }
@@ -208,24 +234,27 @@ sub _logged_in {
       unless $self->is_logged_in;
 }
 
+=head2 C<< friends_for >>
+
+=cut
+
+sub friends_for {
+    my $self = shift;
+    my $for = $self->_uid_cast( shift || $self );
+    $self->_logged_in;
+    my $friends
+      = $self->_json_get( get_completion => { user_id => $for } );
+    return map { WWW::Plurk::Friend->new( $self, $_, $friends->{$_} ) }
+      keys %$friends;
+}
+
 =head2 C<< friends >>
 
 =cut
 
-sub _get_friends {
-    my $self = shift;
-    $self->_logged_in;
-    my $friends = decode_json $self->_get(
-        get_completion => { user_id => $self->uid } )->content;
-    return [
-        map { WWW::Plurk::Friend->new( $_, $friends->{$_} ) }
-          keys %$friends
-    ];
-}
-
 sub friends {
     my $self = shift;
-    return @{ $self->{friends} ||= $self->_get_friends };
+    return $self->friends_for( $self );
 }
 
 =head2 C<< add_plurk >>
@@ -256,8 +285,8 @@ sub add_plurk {
 
     my $content = delete $args{content} || croak "Must have content";
     my $lang    = delete $args{lang}    || 'en';
-    my $qualifier   = delete $args{qualifier}   || 'says';
-    my $no_comments = delete $args{no_comments} || 0;
+    my $qualifier = delete $args{qualifier} || 'says';
+    my $no_comments = delete $args{no_comments};
 
     my @limit
       = map { $self->_uid_cast( $_ ) } @{ delete $args{limit} || [] };
@@ -272,23 +301,18 @@ sub add_plurk {
           . ' characters';
     }
 
-    my $reply = $self->_decode_json(
-        $self->_get(
-            add_plurk => {
-                posted      => localtime()->datetime,
-                qualifier   => $qualifier,
-                content     => $content,
-                lang        => $lang,
-                no_comments => ( $no_comments ? 1 : 0 ),
-                @limit
-                ? ( limited_to => '[' . join( ',', @limit ) . ']' )
-                : (),
-            }
-          )->content
+    my $reply = $self->_json_get(
+        add_plurk => {
+            posted      => localtime()->datetime,
+            qualifier   => $qualifier,
+            content     => $content,
+            lang        => $lang,
+            no_comments => ( $no_comments ? 1 : 0 ),
+            @limit
+            ? ( limited_to => '[' . join( ',', @limit ) . ']' )
+            : (),
+        }
     );
-
-    # use Data::Dumper;
-    # warn "# ", Dumper( $reply ), "\n";
 
     if ( my $error = $reply->{error} ) {
         croak "Error posting: $error";
@@ -308,13 +332,43 @@ sub get_plurks {
       if @args & 1;
     my %args = @args;
 
-    my $uid = $self->_uid_cast( delete $args{uid} || $self->uid );
-    # TODO: Don't understand the dates
-    my $responses = delete $args{responses} || 0;
+    my $uid = $self->_uid_cast( delete $args{uid} || $self );
+
+    my $responses   = delete $args{responses};
+    my $date_from   = delete $args{date_from};
+    my $date_offset = delete $args{date_offset};
 
     if ( my @extra = sort keys %args ) {
         croak "Unknown parameter(s): ", join ',', @extra;
     }
+
+    my $reply = $self->_json_post(
+        get_plurks => {
+            user_id => $uid,
+            defined $date_from
+            ? ( from_date => gmtime( $date_from )->datetime )
+            : (),
+            defined $date_offset
+            ? ( offset => gmtime( $date_offset )->datetime )
+            : (),
+        }
+    );
+
+    return map { WWW::Plurk::Message->new( $self, $_ ) } @{$reply};
+}
+
+=head2 C<< get_responses_for >>
+
+=cut
+
+sub get_responses_for {
+    my ( $self, $plurk_id ) = @_;
+
+    my $reply
+      = $self->_json_post( get_responses => { plurk_id => $plurk_id } );
+
+    use Data::Dumper;
+    warn "# ", Dumper( $reply );
 }
 
 =head2 C<< path_for >>

@@ -44,6 +44,7 @@ BEGIN {
       responses_seen
       source
       user_id
+      plurk
     );
 
     for my $info ( @INFO ) {
@@ -59,8 +60,20 @@ BEGIN {
 =cut
 
 sub new {
-    my ( $class, $detail ) = @_;
-    return bless { %$detail, }, $class;
+    my ( $class, $plurk, $detail ) = @_;
+    return bless {
+        plurk => $plurk,
+        %$detail,
+    }, $class;
+}
+
+=head2 C<< get_responses >>
+
+=cut
+
+sub get_responses {
+    my $self = shift;
+    return $self->plurk->get_responses_for( $self->plurk_id );
 }
 
 =head2 C<< content >>
@@ -94,6 +107,8 @@ sub new {
 =head2 C<< source >>
 
 =head2 C<< user_id >>
+
+=head2 C<< plurk >>
 
 =cut
 
