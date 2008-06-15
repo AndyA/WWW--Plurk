@@ -25,6 +25,8 @@ if ( my $plurk_env = $ENV{PLURK_TEST_ACCOUNT} ) {
     # diag Dumper( \@plurks );
     if ( @plurks ) {
         my @responses = $plurks[0]->get_responses;
+        use Data::Dumper;
+        diag Dumper( \@responses );
     }
 }
 else {

@@ -28,6 +28,7 @@ Based on Ryan Lim's unofficial PHP API: L<http://code.google.com/p/rlplurkapi/>
 
 BEGIN {
     my @INFO = qw(
+      author
       content
       content_raw
       id
@@ -60,9 +61,10 @@ BEGIN {
 =cut
 
 sub new {
-    my ( $class, $plurk, $detail ) = @_;
+    my ( $class, $plurk, $detail, $author ) = @_;
     return bless {
-        plurk => $plurk,
+        plurk  => $plurk,
+        author => $author,
         %$detail,
     }, $class;
 }
@@ -75,6 +77,8 @@ sub get_responses {
     my $self = shift;
     return $self->plurk->get_responses_for( $self->plurk_id );
 }
+
+=head2 C<< author >>
 
 =head2 C<< content >>
 

@@ -64,8 +64,18 @@ BEGIN {
     );
 
     my @INFO = qw(
+      display_name
       full_name
+      gender
+      has_profile_image
+      id
+      is_channel
+      karma
+      location
       nick_name
+      page_title
+      relationship
+      star_reward
       uid
     );
 
@@ -288,8 +298,7 @@ sub add_plurk {
     my $qualifier = delete $args{qualifier} || 'says';
     my $no_comments = delete $args{no_comments};
 
-    my @limit
-      = map { $self->_uid_cast( $_ ) } @{ delete $args{limit} || [] };
+    my @limit = @{ delete $args{limit} || [] };
 
     if ( my @extra = sort keys %args ) {
         croak "Unknown parameter(s): ", join ',', @extra;
@@ -309,7 +318,9 @@ sub add_plurk {
             lang        => $lang,
             no_comments => ( $no_comments ? 1 : 0 ),
             @limit
-            ? ( limited_to => '[' . join( ',', @limit ) . ']' )
+            ? ( limited_to => '['
+                  . join( ',', map { $self->_uid_cast( $_ ) } @limit )
+                  . ']' )
             : (),
         }
     );
@@ -367,8 +378,14 @@ sub get_responses_for {
     my $reply
       = $self->_json_post( get_responses => { plurk_id => $plurk_id } );
 
-    use Data::Dumper;
-    warn "# ", Dumper( $reply );
+    my %friends = map {
+        $_ =>
+          WWW::Plurk::Friend->new( $self, $_, $reply->{friends}{$_} )
+    } keys %{ $reply->{friends} };
+
+    return map {
+        WWW::Plurk::Message->new( $self, $_, $friends{ $_->{user_id} } )
+    } @{ $reply->{responses} };
 }
 
 =head2 C<< path_for >>
@@ -403,9 +420,29 @@ sub uri_for {
 
 =head2 C<< state >>
 
-=head2 C<< nick_name >>
+=head2 C<< display_name >>
 
 =head2 C<< full_name >>
+
+=head2 C<< gender >>
+
+=head2 C<< has_profile_image >>
+
+=head2 C<< id >>
+
+=head2 C<< is_channel >>
+
+=head2 C<< karma >>
+
+=head2 C<< location >>
+
+=head2 C<< nick_name >>
+
+=head2 C<< page_title >>
+
+=head2 C<< relationship >>
+
+=head2 C<< star_reward >>
 
 =head2 C<< uid >>
 

@@ -28,8 +28,18 @@ Based on Ryan Lim's unofficial PHP API: L<http://code.google.com/p/rlplurkapi/>
 
 BEGIN {
     my @INFO = qw(
+      display_name
       full_name
+      gender
+      has_profile_image
+      id
+      is_channel
+      karma
+      location
       nick_name
+      page_title
+      relationship
+      star_reward
       uid
       plurk
     );
@@ -64,9 +74,29 @@ sub friends {
     return $self->plurk->friends_for( $self );
 }
 
+=head2 C<< display_name >>
+
 =head2 C<< full_name >>
 
+=head2 C<< gender >>
+
+=head2 C<< has_profile_image >>
+
+=head2 C<< id >>
+
+=head2 C<< is_channel >>
+
+=head2 C<< karma >>
+
+=head2 C<< location >>
+
 =head2 C<< nick_name >>
+
+=head2 C<< page_title >>
+
+=head2 C<< relationship >>
+
+=head2 C<< star_reward >>
 
 =head2 C<< uid >>
 
