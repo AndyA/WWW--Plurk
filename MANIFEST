@@ -1,3 +1,4 @@
+bin/plurk
 Changes
 lib/WWW/Plurk.pm
 lib/WWW/Plurk/Friend.pm
