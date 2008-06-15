@@ -3,6 +3,7 @@ package WWW::Plurk::Message;
 use warnings;
 use strict;
 use Carp;
+use Math::Base36 qw( encode_base36 );
 
 =head1 NAME
 
@@ -18,9 +19,13 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-    use WWW::Plurk::Message;
+    use WWW::Plurk;
+    my $plurk = WWW::Plurk->new( 'username', 'password' );
+    my @plurks = $plurk->plurks;
   
 =head1 DESCRIPTION
+
+Represents an individual Plurk or response.
 
 Based on Ryan Lim's unofficial PHP API: L<http://code.google.com/p/rlplurkapi/>
 
@@ -58,6 +63,8 @@ BEGIN {
 
 =head2 C<< new >>
 
+Called internally.
+
 =cut
 
 sub new {
@@ -69,50 +76,91 @@ sub new {
     }, $class;
 }
 
-=head2 C<< get_responses >>
+=head2 C<< responses >>
+
+Get the responses for this Plurk. If called on an object that already
+represents a response gets the peers of that response (i.e. the other
+responses to the same Plurk).
 
 =cut
 
-sub get_responses {
+sub responses {
     my $self = shift;
-    return $self->plurk->get_responses_for( $self->plurk_id );
+    return $self->plurk->responses_for( $self->plurk_id, @_ );
 }
 
-=head2 C<< author >>
+=head2 C<< respond >>
 
-=head2 C<< content >>
+Respond to a Plurk. See L<WWW::Plurk#respond_to_plurk> for details of
+arguments.
 
-=head2 C<< content_raw >>
+    $msg->respond( content => "I'm free!" );
 
-=head2 C<< id >>
+Returns the newly created response.
 
-=head2 C<< is_mute >>
+=cut
 
-=head2 C<< is_unread >>
+sub respond {
+    my $self = shift;
+    return $self->plurk->respond_to_plurk( $self->plurk_id, @_ );
+}
 
-=head2 C<< lang >>
+=head2 C<< permalink >>
 
-=head2 C<< limited_to >>
+Get a URI that is a permanent link to this Plurk. If called on a
+response gets a permalink to the parent Plurk.
 
-=head2 C<< no_comments >>
+=cut
 
-=head2 C<< owner_id >>
+sub permalink {
+    my $self = shift;
+    return $self->plurk->_base_uri . '/p/'
+      . encode_base36( $self->plurk_id );
+}
 
-=head2 C<< plurk_id >>
+=head2 Accessors
 
-=head2 C<< posted >>
+The following accessors provide access to the content of this Plurk:
 
-=head2 C<< qualifier >>
+=over
 
-=head2 C<< response_count >>
+=item * C<< author >>
 
-=head2 C<< responses_seen >>
+=item * C<< content >>
 
-=head2 C<< source >>
+=item * C<< content_raw >>
 
-=head2 C<< user_id >>
+=item * C<< id >>
 
-=head2 C<< plurk >>
+=item * C<< is_mute >>
+
+=item * C<< is_unread >>
+
+=item * C<< lang >>
+
+=item * C<< limited_to >>
+
+=item * C<< no_comments >>
+
+=item * C<< owner_id >>
+
+=item * C<< plurk_id >>
+
+=item * C<< posted >>
+
+=item * C<< qualifier >>
+
+=item * C<< response_count >>
+
+=item * C<< responses_seen >>
+
+=item * C<< source >>
+
+=item * C<< user_id >>
+
+=item * C<< plurk >>
+
+=back
 
 =cut
 

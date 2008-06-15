@@ -5,32 +5,72 @@ use Test::More;
 use Test::Deep;
 
 if ( my $plurk_env = $ENV{PLURK_TEST_ACCOUNT} ) {
+    plan tests => 11;
     my ( $user, $pass ) = split /:/, $plurk_env, 2;
-    plan tests => 2;
+
     my $plurk = WWW::Plurk->new;
-    $plurk->login( $user, $pass );
+    eval { $plurk->login( $user, $pass ) };
+    ok !$@, "login: no error" or diag "$@";
+
+    # use Data::Dumper;
+    # diag Dumper( $plurk );
+
     is $plurk->nick_name, $user, "nick name";
 
-    my @friends = $plurk->friends;
-    cmp_deeply [@friends], array_each( isa( 'WWW::Plurk::Friend' ) ),
+    my @friends = eval { $plurk->friends };
+    ok !$@, "friends: no error" or diag "$@";
+    cmp_deeply [@friends],
+      array_each(
+        all( isa( 'WWW::Plurk::Friend' ), methods( plurk => $plurk ) )
+      ),
       "friends";
 
-    # $plurk->add_plurk(
-    #     qualifier => 'is',
-    #     content   => 'testing WWW::Plurk repeatedly'
-    # );
+    my @plurks = eval { $plurk->plurks };
+    ok !$@, "messages: no error" or diag "$@";
+    cmp_deeply [@plurks],
+      array_each(
+        all( isa( 'WWW::Plurk::Message' ), methods( plurk => $plurk ) )
+      ),
+      "messages";
 
-    my @plurks = $plurk->get_plurks;
-    # use Data::Dumper;
-    # diag Dumper( \@plurks );
     if ( @plurks ) {
-        my @responses = $plurks[0]->get_responses;
-        use Data::Dumper;
-        diag Dumper( \@responses );
+        my $message = $plurks[0];
+        {
+            my @responses = eval { $message->responses };
+            ok !$@, "responses: no error" or diag "$@";
+            cmp_deeply [@responses],
+              array_each(
+                all(
+                    isa( 'WWW::Plurk::Message' ),
+                    methods( plurk => $plurk )
+                )
+              ),
+              "responses";
+        }
+        {
+            my $link = $message->permalink;
+            ok can_fetch( $plurk->_ua, $link );
+        };
     }
+    else {
+        pass "no responses" for 1 .. 2;
+    }
+
+    my @unread = eval { $plurk->unread_plurks };
+    ok !$@, "unread: no error" or diag "$@";
+    cmp_deeply [@unread],
+      array_each(
+        all( isa( 'WWW::Plurk::Message' ), methods( plurk => $plurk ) )
+      ),
+      "unread";
 }
 else {
     plan skip_all =>
       'Set $ENV{PLURK_TEST_ACCOUNT} to "user:pass" to run these tests';
 }
 
+sub can_fetch {
+    my ( $ua, $uri ) = @_;
+    my $resp = $ua->get( $uri );
+    return $resp->is_success;
+}

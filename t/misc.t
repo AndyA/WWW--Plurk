@@ -21,7 +21,7 @@ my %URIS = (
 my $plurk = WWW::Plurk->new;
 
 while ( my ( $key, $uri ) = each %URIS ) {
-    is $plurk->uri_for( $key ), $uri, "uri for $key";
+    is $plurk->_uri_for( $key ), $uri, "uri for $key";
 }
 
 is_deeply $plurk->_decode_json(

@@ -18,9 +18,13 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-    use WWW::Plurk::Friend;
+    use WWW::Plurk;
+    my $plurk = WWW::Plurk->new( 'username', 'password' );
+    my @friends = $plurk->friends;
   
 =head1 DESCRIPTION
+
+Represents a user other than the logged in user.
 
 Based on Ryan Lim's unofficial PHP API: L<http://code.google.com/p/rlplurkapi/>
 
@@ -54,6 +58,8 @@ BEGIN {
 
 =head2 C<< new >>
 
+Called internally.
+
 =cut
 
 sub new {
@@ -67,6 +73,8 @@ sub new {
 
 =head2 C<< friends >>
 
+Get this user's friends. See L<WWW::Plurk#friends> for more details.
+
 =cut
 
 sub friends {
@@ -74,33 +82,41 @@ sub friends {
     return $self->plurk->friends_for( $self );
 }
 
-=head2 C<< display_name >>
+=head2 Accessors
 
-=head2 C<< full_name >>
+The following accessors provide access to the content of this Plurk:
 
-=head2 C<< gender >>
+=over
 
-=head2 C<< has_profile_image >>
+=item * C<< display_name >>
 
-=head2 C<< id >>
+=item * C<< full_name >>
 
-=head2 C<< is_channel >>
+=item * C<< gender >>
 
-=head2 C<< karma >>
+=item * C<< has_profile_image >>
 
-=head2 C<< location >>
+=item * C<< id >>
 
-=head2 C<< nick_name >>
+=item * C<< is_channel >>
 
-=head2 C<< page_title >>
+=item * C<< karma >>
 
-=head2 C<< relationship >>
+=item * C<< location >>
 
-=head2 C<< star_reward >>
+=item * C<< nick_name >>
 
-=head2 C<< uid >>
+=item * C<< page_title >>
 
-=head2 C<< plurk >>
+=item * C<< relationship >>
+
+=item * C<< star_reward >>
+
+=item * C<< uid >>
+
+=item * C<< plurk >>
+
+=back
 
 =cut
 
