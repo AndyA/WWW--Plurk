@@ -570,14 +570,12 @@ sub unread_plurks {
 
 sub _want_hash {
     my ( $self, $hash, @keys ) = @_;
+    # Replace empty arrays with empty hashes at the top level of a hash.
     for my $key ( @keys ) {
-        if (
-            !exists $hash->{$key}
-            || ( 'ARRAY' eq ref $hash->{$key}
-                && @{ $hash->{$key} } == 0 )
-          ) {
-            $hash->{$key} = {};
-        }
+        $hash->{$key} = {}
+          if !exists $hash->{$key}
+              || ( 'ARRAY' eq ref $hash->{$key}
+                  && @{ $hash->{$key} } == 0 );
     }
 }
 
