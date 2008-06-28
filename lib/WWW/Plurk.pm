@@ -42,6 +42,11 @@ updated to take advantage of it. In the mean time use with caution.
 Ryan Lim did the heavy lifting of reverse engineering the API. His PHP
 implementation can be found at L<http://code.google.com/p/rlplurkapi/>.
 
+If you'd like to lend a hand supporting the bits of Plurk that this API
+doesn't yet reach please feel free to send me a patch. The Plurk API
+Wiki at L<http://plurkwiki.badchemicals.net/> is a good source of
+information.
+
 =cut
 
 # Default API URIs
