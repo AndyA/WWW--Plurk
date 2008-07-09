@@ -8,6 +8,7 @@ use DateTime::Format::Mail;
 use HTML::Tiny;
 use HTTP::Cookies;
 use JSON;
+use Data::Dumper;
 use LWP::UserAgent;
 use Time::Piece;
 use WWW::Plurk::Friend;
@@ -75,6 +76,7 @@ BEGIN {
       _base_uri
       info
       state
+      trace
     );
 
     my @INFO = qw(
@@ -141,6 +143,7 @@ sub new {
         _base_uri => $BASE_DEFAULT,
         path      => {%PATH_DEFAULT},
         state     => 'init',
+        trace     => $ENV{PLURK_TRACE} ? 1 : 0,
     }, $class;
 
     if ( @_ ) {
@@ -165,12 +168,38 @@ sub _ua {
     return $self->{_ua} ||= $self->_make_ua;
 }
 
+sub _trace {
+    my ( $self, @msgs ) = @_;
+    if ( $self->trace ) {
+        print STDERR "$_\n" for @msgs;
+    }
+}
+
+sub _raw_post {
+    my ( $self, $uri, $params ) = @_;
+    $self->_trace(
+        POST => $uri,
+        Data::Dumper->Dump( [$params], [qw($params)] )
+    );
+    my $resp = $self->_ua->post( $uri, $params );
+    $self->_trace( $resp->status_line );
+    return $resp;
+}
+
+sub _raw_get {
+    my ( $self, $uri ) = @_;
+    $self->_trace( GET => $uri );
+    my $resp = $self->_ua->get( $uri );
+    $self->_trace( $resp->status_line );
+    return $resp;
+}
+
 sub _cookies { shift->_ua->cookie_jar }
 
 sub _post {
     my ( $self, $service, $params ) = @_;
     my $resp
-      = $self->_ua->post( $self->_uri_for( $service ), $params || {} );
+      = $self->_raw_post( $self->_uri_for( $service ), $params || {} );
     croak $resp->status_line
       unless $resp->is_success
           or $resp->is_redirect;
@@ -185,7 +214,7 @@ sub _json_post {
 sub _get {
     my ( $self, $service, $params ) = @_;
     my $resp
-      = $self->_ua->get( $self->_uri_for( $service, $params || {} ) );
+      = $self->_raw_get( $self->_uri_for( $service, $params || {} ) );
     croak $resp->status_line
       unless $resp->is_success
           or $resp->is_redirect;
@@ -473,12 +502,13 @@ sub add_plurk {
         @args
       );
 
-    my $reply = $self->_json_get(
+    my $reply = $self->_json_post(
         add_plurk => {
             posted      => localtime()->datetime,
             qualifier   => $qualifier,
             content     => $content,
             lang        => $lang,
+            uid         => $self->uid,
             no_comments => ( $no_comments ? 1 : 0 ),
             @limit
             ? ( limited_to => '['
@@ -646,7 +676,7 @@ sub respond_to_plurk {
     my ( $content, $lang, $qualifier )
       = $self->_msg_common( sub { () }, @args );
 
-    my $reply = $self->_json_get(
+    my $reply = $self->_json_post(
         add_response => {
             posted    => localtime()->datetime,
             qualifier => $qualifier,
@@ -654,6 +684,7 @@ sub respond_to_plurk {
             lang      => $lang,
             p_uid     => $self->uid,
             plurk_id  => $plurk_id,
+            uid       => $self->uid,
         }
     );
 
@@ -689,6 +720,8 @@ The following accessors are available:
 =item * C<< info >> - the user info hash
 
 =item * C<< state >> - the state of this object (init or login)
+
+=item * C<< trace >> - set true to enable HTTP query tracing
 
 =item * C<< display_name >> - the user's display name
 

@@ -13,6 +13,7 @@ WriteMakefile(
     ABSTRACT_FROM => 'lib/WWW/Plurk.pm',
     PL_FILES      => {},
     PREREQ_PM     => {
+        'Data::Dumper'           => 0,
         'DateTime::Format::Mail' => 0,
         'Getopt::Long'           => 0,
         'HTML::Tiny'             => 0,
