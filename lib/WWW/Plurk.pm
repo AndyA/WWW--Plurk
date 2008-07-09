@@ -20,11 +20,11 @@ WWW::Plurk - Unoffical plurk.com API
 
 =head1 VERSION
 
-This document describes WWW::Plurk version 0.02
+This document describes WWW::Plurk version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -508,6 +508,7 @@ sub add_plurk {
             qualifier   => $qualifier,
             content     => $content,
             lang        => $lang,
+            uid         => $self->uid,
             no_comments => ( $no_comments ? 1 : 0 ),
             @limit
             ? ( limited_to => '['
@@ -675,7 +676,7 @@ sub respond_to_plurk {
     my ( $content, $lang, $qualifier )
       = $self->_msg_common( sub { () }, @args );
 
-    my $reply = $self->_json_get(
+    my $reply = $self->_json_post(
         add_response => {
             posted    => localtime()->datetime,
             qualifier => $qualifier,
@@ -683,6 +684,7 @@ sub respond_to_plurk {
             lang      => $lang,
             p_uid     => $self->uid,
             plurk_id  => $plurk_id,
+            uid       => $self->uid,
         }
     );
 
